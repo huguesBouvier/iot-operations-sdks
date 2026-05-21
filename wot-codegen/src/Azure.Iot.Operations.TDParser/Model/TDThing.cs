@@ -26,6 +26,7 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string IsEventLegacyName = "aov:isEvent";
         public const string TypeRefName = "dov:typeRef";
         public const string TypeRefLegacyName = "aov:typeRef";
+        public const string MetadataName = "dov:metadata";
 
         public static readonly HashSet<string> SupportedProperties = new()
         {
@@ -45,7 +46,8 @@ namespace Azure.Iot.Operations.TDParser.Model
             IsEventName,
             IsEventLegacyName,
             TypeRefName,
-            TypeRefLegacyName
+            TypeRefLegacyName,
+            MetadataName
         };
 
         public ArrayTracker<TDContextSpecifier>? Context { get; set; }
@@ -76,6 +78,8 @@ namespace Azure.Iot.Operations.TDParser.Model
 
         public ValueTracker<StringHolder>? TypeRef { get; set; }
 
+        public ValueTracker<TDAnything>? Metadata { get; set; }
+
         public Dictionary<string, long> PropertyNames { get; set; } = new();
 
         public PrefixType IsCompositePrefixType { get; set; } = PrefixType.Indeterminate;
@@ -105,13 +109,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                        Events == other.Events &&
                        IsComposite == other.IsComposite &&
                        IsEvent == other.IsEvent &&
-                       TypeRef == other.TypeRef;
+                       TypeRef == other.TypeRef &&
+                       Metadata == other.Metadata;
             }
         }
 
         public override int GetHashCode()
         {
-            return (Context, Type, Title, Description, Links, SchemaDefinitions, Forms, Optional, Actions, Properties, Events, IsComposite, IsEvent, TypeRef).GetHashCode();
+            return (Context, Type, Title, Description, Links, SchemaDefinitions, Forms, Optional, Actions, Properties, Events, IsComposite, IsEvent, TypeRef, Metadata).GetHashCode();
         }
 
         public static bool operator ==(TDThing? left, TDThing? right)
@@ -251,6 +256,13 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (Metadata != null)
+            {
+                foreach (ITraversable item in Metadata.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static TDThing Deserialize(ref Utf8JsonReader reader)
@@ -328,6 +340,9 @@ namespace Azure.Iot.Operations.TDParser.Model
                     case TypeRefLegacyName:
                         thing.TypeRef = ValueTracker<StringHolder>.Deserialize(ref reader, TypeRefName);
                         thing.TypeRefPrefixType = PrefixType.AioPlatform;
+                        break;
+                    case MetadataName:
+                        thing.Metadata = ValueTracker<TDAnything>.Deserialize(ref reader, MetadataName);
                         break;
                     default:
                         reader.Skip();
