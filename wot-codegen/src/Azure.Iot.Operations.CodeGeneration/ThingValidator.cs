@@ -88,6 +88,11 @@ namespace Azure.Iot.Operations.CodeGeneration
                 hasError = true;
             }
 
+            if (!TryValidateAffordanceGroups(thing.PropertyGroups, thing.EventGroups, thing.ActionGroups))
+            {
+                hasError = true;
+            }
+
             if (hasError)
             {
                 return false;
@@ -645,6 +650,93 @@ namespace Azure.Iot.Operations.CodeGeneration
             }
 
             return true;
+        }
+
+        private bool TryValidateAffordanceGroups(ArrayTracker<TDAffordanceGroup>? propertyGroups, ArrayTracker<TDAffordanceGroup>? eventGroups, ArrayTracker<TDAffordanceGroup>? actionGroups)
+        {
+            bool hasError = false;
+            Dictionary<string, long> allTitles = new();
+
+            if (!TryValidateAffordanceGroupArray(propertyGroups, TDThing.PropertyGroupsName, allTitles))
+            {
+                hasError = true;
+            }
+
+            if (!TryValidateAffordanceGroupArray(eventGroups, TDThing.EventGroupsName, allTitles))
+            {
+                hasError = true;
+            }
+
+            if (!TryValidateAffordanceGroupArray(actionGroups, TDThing.ActionGroupsName, allTitles))
+            {
+                hasError = true;
+            }
+
+            return !hasError;
+        }
+
+        private bool TryValidateAffordanceGroupArray(ArrayTracker<TDAffordanceGroup>? groups, string propertyName, Dictionary<string, long> allTitles)
+        {
+            if (groups?.Elements == null)
+            {
+                return true;
+            }
+
+            bool hasError = false;
+            Dictionary<string, long> localTitles = new();
+
+            foreach (ValueTracker<TDAffordanceGroup> element in groups.Elements)
+            {
+                if (element.DeserializingFailed)
+                {
+                    hasError = true;
+                    continue;
+                }
+
+                TDAffordanceGroup group = element.Value;
+                ValueTracker<StringHolder>? title = group.Title;
+
+                if (title == null)
+                {
+                    errorReporter.ReportError(ErrorCondition.PropertyMissing, $"Thing Model '{propertyName}' array element is missing required '{TDAffordanceGroup.TitleName}' property.", element.TokenIndex);
+                    hasError = true;
+                    continue;
+                }
+
+                if (title.DeserializingFailed)
+                {
+                    hasError = true;
+                    continue;
+                }
+
+                string titleValue = title.Value.Value;
+                if (string.IsNullOrEmpty(titleValue))
+                {
+                    errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Thing Model '{propertyName}' array element '{TDAffordanceGroup.TitleName}' property has empty value.", title.TokenIndex);
+                    hasError = true;
+                    continue;
+                }
+
+                if (localTitles.TryGetValue(titleValue, out long priorTokenIndex))
+                {
+                    errorReporter.ReportError(ErrorCondition.Duplication, $"Thing Model '{propertyName}' array contains duplicate '{TDAffordanceGroup.TitleName}' value \"{titleValue}\".", priorTokenIndex, title.TokenIndex);
+                    hasError = true;
+                    continue;
+                }
+
+                localTitles[titleValue] = title.TokenIndex;
+
+                if (allTitles.TryGetValue(titleValue, out long crossTokenIndex))
+                {
+                    errorReporter.ReportError(ErrorCondition.Duplication, $"Thing Model affordance groups contain duplicate '{TDAffordanceGroup.TitleName}' value \"{titleValue}\" across '{TDThing.PropertyGroupsName}', '{TDThing.EventGroupsName}', and '{TDThing.ActionGroupsName}' arrays.", crossTokenIndex, title.TokenIndex);
+                    hasError = true;
+                    continue;
+                }
+
+                allTitles[titleValue] = title.TokenIndex;
+            }
+
+            return !hasError;
         }
 
         private bool TryValidateCompositeAndEvent(TDThing thing, bool dovContextPresent, bool platContextPresent, long contextTokenIndex)

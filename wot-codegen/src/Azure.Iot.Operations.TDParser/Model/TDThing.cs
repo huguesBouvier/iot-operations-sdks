@@ -27,6 +27,9 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string TypeRefName = "dov:typeRef";
         public const string TypeRefLegacyName = "aov:typeRef";
         public const string MetadataName = "dov:metadata";
+        public const string PropertyGroupsName = "dov:propertyGroups";
+        public const string EventGroupsName = "dov:eventGroups";
+        public const string ActionGroupsName = "dov:actionGroups";
 
         public static readonly HashSet<string> SupportedProperties = new()
         {
@@ -47,7 +50,10 @@ namespace Azure.Iot.Operations.TDParser.Model
             IsEventLegacyName,
             TypeRefName,
             TypeRefLegacyName,
-            MetadataName
+            MetadataName,
+            PropertyGroupsName,
+            EventGroupsName,
+            ActionGroupsName
         };
 
         public ArrayTracker<TDContextSpecifier>? Context { get; set; }
@@ -80,6 +86,12 @@ namespace Azure.Iot.Operations.TDParser.Model
 
         public ValueTracker<TDAnything>? Metadata { get; set; }
 
+        public ArrayTracker<TDAffordanceGroup>? PropertyGroups { get; set; }
+
+        public ArrayTracker<TDAffordanceGroup>? EventGroups { get; set; }
+
+        public ArrayTracker<TDAffordanceGroup>? ActionGroups { get; set; }
+
         public Dictionary<string, long> PropertyNames { get; set; } = new();
 
         public PrefixType IsCompositePrefixType { get; set; } = PrefixType.Indeterminate;
@@ -110,13 +122,16 @@ namespace Azure.Iot.Operations.TDParser.Model
                        IsComposite == other.IsComposite &&
                        IsEvent == other.IsEvent &&
                        TypeRef == other.TypeRef &&
-                       Metadata == other.Metadata;
+                       Metadata == other.Metadata &&
+                       PropertyGroups == other.PropertyGroups &&
+                       EventGroups == other.EventGroups &&
+                       ActionGroups == other.ActionGroups;
             }
         }
 
         public override int GetHashCode()
         {
-            return (Context, Type, Title, Description, Links, SchemaDefinitions, Forms, Optional, Actions, Properties, Events, IsComposite, IsEvent, TypeRef, Metadata).GetHashCode();
+            return (Context, Type, Title, Description, Links, SchemaDefinitions, Forms, Optional, Actions, Properties, Events, IsComposite, IsEvent, TypeRef, Metadata, PropertyGroups, EventGroups, ActionGroups).GetHashCode();
         }
 
         public static bool operator ==(TDThing? left, TDThing? right)
@@ -263,6 +278,27 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (PropertyGroups != null)
+            {
+                foreach (ITraversable item in PropertyGroups.Traverse())
+                {
+                    yield return item;
+                }
+            }
+            if (EventGroups != null)
+            {
+                foreach (ITraversable item in EventGroups.Traverse())
+                {
+                    yield return item;
+                }
+            }
+            if (ActionGroups != null)
+            {
+                foreach (ITraversable item in ActionGroups.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static TDThing Deserialize(ref Utf8JsonReader reader)
@@ -343,6 +379,15 @@ namespace Azure.Iot.Operations.TDParser.Model
                         break;
                     case MetadataName:
                         thing.Metadata = ValueTracker<TDAnything>.Deserialize(ref reader, MetadataName);
+                        break;
+                    case PropertyGroupsName:
+                        thing.PropertyGroups = ArrayTracker<TDAffordanceGroup>.Deserialize(ref reader, PropertyGroupsName);
+                        break;
+                    case EventGroupsName:
+                        thing.EventGroups = ArrayTracker<TDAffordanceGroup>.Deserialize(ref reader, EventGroupsName);
+                        break;
+                    case ActionGroupsName:
+                        thing.ActionGroups = ArrayTracker<TDAffordanceGroup>.Deserialize(ref reader, ActionGroupsName);
                         break;
                     default:
                         reader.Skip();
