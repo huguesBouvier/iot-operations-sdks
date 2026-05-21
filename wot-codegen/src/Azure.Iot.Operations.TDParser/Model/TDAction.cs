@@ -20,6 +20,7 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string MemberOfName = TDCommon.MemberOfName;
         public const string MemberOfLegacyName = TDCommon.MemberOfLegacyName;
         public const string PropertyIriName = TDCommon.PropertyIriName;
+        public const string ActionConfigurationName = "dov:actionConfiguration";
 
         public static readonly HashSet<string> SupportedProperties = new()
         {
@@ -33,7 +34,8 @@ namespace Azure.Iot.Operations.TDParser.Model
             NamespaceLegacyName,
             MemberOfName,
             MemberOfLegacyName,
-            PropertyIriName
+            PropertyIriName,
+            ActionConfigurationName
         };
 
         public ValueTracker<StringHolder>? Description { get; set; }
@@ -53,6 +55,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public ValueTracker<StringHolder>? MemberOf { get; set; }
 
         public ValueTracker<StringHolder>? PropertyIri { get; set; }
+
+        public ValueTracker<TDAnything>? ActionConfiguration { get; set; }
 
         public Dictionary<string, long> PropertyNames { get; set; } = new();
 
@@ -76,13 +80,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                        Forms == other.Forms &&
                        Namespace == other.Namespace &&
                        MemberOf == other.MemberOf &&
-                       PropertyIri == other.PropertyIri;
+                       PropertyIri == other.PropertyIri &&
+                       ActionConfiguration == other.ActionConfiguration;
             }
         }
 
         public override int GetHashCode()
         {
-            return (Description, Input, Output, Idempotent, Safe, Forms, Namespace, MemberOf, PropertyIri).GetHashCode();
+            return (Description, Input, Output, Idempotent, Safe, Forms, Namespace, MemberOf, PropertyIri, ActionConfiguration).GetHashCode();
         }
 
         public static bool operator ==(TDAction? left, TDAction? right)
@@ -187,6 +192,13 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (ActionConfiguration != null)
+            {
+                foreach (ITraversable item in ActionConfiguration.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static TDAction Deserialize(ref Utf8JsonReader reader)
@@ -244,6 +256,9 @@ namespace Azure.Iot.Operations.TDParser.Model
                         break;
                     case PropertyIriName:
                         action.PropertyIri = ValueTracker<StringHolder>.Deserialize(ref reader, PropertyIriName);
+                        break;
+                    case ActionConfigurationName:
+                        action.ActionConfiguration = ValueTracker<TDAnything>.Deserialize(ref reader, ActionConfigurationName);
                         break;
                     default:
                         reader.Skip();

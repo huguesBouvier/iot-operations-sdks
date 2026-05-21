@@ -23,6 +23,7 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string MemberOfName = TDCommon.MemberOfName;
         public const string MemberOfLegacyName = TDCommon.MemberOfLegacyName;
         public const string PropertyIriName = TDCommon.PropertyIriName;
+        public const string PropertyConfigurationName = "dov:propertyConfiguration";
 
         public static new readonly HashSet<string> SupportedProperties = new()
         {
@@ -39,7 +40,8 @@ namespace Azure.Iot.Operations.TDParser.Model
             HasQuantityKindName,
             MemberOfName,
             MemberOfLegacyName,
-            PropertyIriName
+            PropertyIriName,
+            PropertyConfigurationName
         };
 
         public ValueTracker<BoolHolder>? ReadOnly { get; set; }
@@ -59,6 +61,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public ValueTracker<StringHolder>? MemberOf { get; set; }
 
         public ValueTracker<StringHolder>? PropertyIri { get; set; }
+
+        public ValueTracker<TDAnything>? PropertyConfiguration { get; set; }
 
         public PrefixType PlaceholderPrefixType { get; set; } = PrefixType.Indeterminate;
 
@@ -87,13 +91,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                        WithUnit == other.WithUnit &&
                        HasQuantityKind == other.HasQuantityKind &&
                        MemberOf == other.MemberOf &&
-                       PropertyIri == other.PropertyIri;
+                       PropertyIri == other.PropertyIri &&
+                       PropertyConfiguration == other.PropertyConfiguration;
             }
         }
 
         public override int GetHashCode()
         {
-            return (base.GetHashCode(), ReadOnly, Placeholder, Forms, Contains, ContainedIn, WithUnit, HasQuantityKind, MemberOf, PropertyIri).GetHashCode();
+            return (base.GetHashCode(), ReadOnly, Placeholder, Forms, Contains, ContainedIn, WithUnit, HasQuantityKind, MemberOf, PropertyIri, PropertyConfiguration).GetHashCode();
         }
 
         public static bool operator ==(TDProperty? left, TDProperty? right)
@@ -203,6 +208,13 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (PropertyConfiguration != null)
+            {
+                foreach (ITraversable item in PropertyConfiguration.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static new TDProperty Deserialize(ref Utf8JsonReader reader)
@@ -277,6 +289,9 @@ namespace Azure.Iot.Operations.TDParser.Model
                             break;
                         case PropertyIriName:
                             prop.PropertyIri = ValueTracker<StringHolder>.Deserialize(ref reader, PropertyIriName);
+                            break;
+                        case PropertyConfigurationName:
+                            prop.PropertyConfiguration = ValueTracker<TDAnything>.Deserialize(ref reader, PropertyConfigurationName);
                             break;
                         default:
                             reader.Skip();
