@@ -73,17 +73,17 @@ namespace Azure.Iot.Operations.CodeGeneration
                 hasError = true;
             }
 
-            if (!TryValidateActions(thing.Actions, thing.SchemaDefinitions, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex))
+            if (!TryValidateActions(thing.Actions, thing.SchemaDefinitions, thing.ActionGroups, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex))
             {
                 hasError = true;
             }
 
-            if (!TryValidateProperties(thing.Properties, thing.SchemaDefinitions, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
+            if (!TryValidateProperties(thing.Properties, thing.SchemaDefinitions, thing.PropertyGroups, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
             {
                 hasError = true;
             }
 
-            if (!TryValidateEvents(thing.Events, thing.Properties, thing.SchemaDefinitions, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
+            if (!TryValidateEvents(thing.Events, thing.Properties, thing.SchemaDefinitions, thing.EventGroups, serializationFormats, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
             {
                 hasError = true;
             }
@@ -739,6 +739,31 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
+        private bool TryValidateMemberOfMatchesGroup(ValueTracker<StringHolder> memberOf, ArrayTracker<TDAffordanceGroup>? groups, string elementKind, string groupsPropertyName)
+        {
+            string memberOfValue = memberOf.Value.Value;
+
+            if (groups?.Elements != null)
+            {
+                foreach (ValueTracker<TDAffordanceGroup> element in groups.Elements)
+                {
+                    if (element.DeserializingFailed)
+                    {
+                        continue;
+                    }
+
+                    ValueTracker<StringHolder>? title = element.Value.Title;
+                    if (title != null && !title.DeserializingFailed && title.Value.Value == memberOfValue)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            errorReporter.ReportError(ErrorCondition.ItemNotFound, $"{elementKind} element '{TDCommon.MemberOfName}' property value \"{memberOfValue}\" does not match the '{TDAffordanceGroup.TitleName}' of any element in the Thing Model '{groupsPropertyName}' array.", memberOf.TokenIndex);
+            return false;
+        }
+
         private bool TryValidateCompositeAndEvent(TDThing thing, bool dovContextPresent, bool platContextPresent, long contextTokenIndex)
         {
             ValueTracker<BoolHolder>? isComposite = thing.IsComposite;
@@ -1039,7 +1064,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
-        private bool TryValidateActions(MapTracker<TDAction>? actions, MapTracker<TDDataSchema>? schemaDefinitions, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, long contextTokenIndex)
+        private bool TryValidateActions(MapTracker<TDAction>? actions, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? actionGroups, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, long contextTokenIndex)
         {
             if (actions?.Entries == null)
             {
@@ -1050,7 +1075,7 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             foreach (KeyValuePair<string, ValueTracker<TDAction>> action in actions.Entries)
             {
-                if (!TryValidateAction(action.Key, action.Value, schemaDefinitions, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex))
+                if (!TryValidateAction(action.Key, action.Value, schemaDefinitions, actionGroups, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex))
                 {
                     hasError = true;
                 }
@@ -1063,7 +1088,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
-        private bool TryValidateAction(string name, ValueTracker<TDAction> action, MapTracker<TDDataSchema>? schemaDefinitions, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, long contextTokenIndex)
+        private bool TryValidateAction(string name, ValueTracker<TDAction> action, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? actionGroups, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, long contextTokenIndex)
         {
             if (!TryValidateForms(action.Value.Forms, FormsKind.Action, schemaDefinitions, out contentType, dovContextPresent, protContextPresent, contextTokenIndex))
             {
@@ -1088,14 +1113,24 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             if (action.Value.MemberOf != null)
             {
+                bool memberOfHasError = false;
                 if (!TryValidateRequiredContext(action.Value.MemberOfPrefixType, dovContextPresent, false, platContextPresent, $"Action element '{TDAction.MemberOfName}' property", action.Value.MemberOf.TokenIndex, contextTokenIndex))
                 {
-                    hasError = true;
+                    memberOfHasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(action.Value.MemberOf.Value.Value))
                 {
                     errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Action element '{TDAction.MemberOfName}' property has empty value.", action.Value.MemberOf.TokenIndex);
+                    memberOfHasError = true;
+                }
+                else if (!memberOfHasError && !TryValidateMemberOfMatchesGroup(action.Value.MemberOf, actionGroups, "Action", TDThing.ActionGroupsName))
+                {
+                    memberOfHasError = true;
+                }
+
+                if (memberOfHasError)
+                {
                     hasError = true;
                 }
             }
@@ -1149,7 +1184,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return TryValidateDataSchema(dataSchema, null, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Action, contentType);
         }
 
-        private bool TryValidateProperties(MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
+        private bool TryValidateProperties(MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? propertyGroups, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
         {
             if (properties?.Entries == null)
             {
@@ -1160,7 +1195,7 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             foreach (KeyValuePair<string, ValueTracker<TDProperty>> property in properties.Entries)
             {
-                if (!TryValidateProperty(property.Key, property.Value, properties, schemaDefinitions, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
+                if (!TryValidateProperty(property.Key, property.Value, properties, schemaDefinitions, propertyGroups, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
                 {
                     hasError = true;
                 }
@@ -1184,7 +1219,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
-        private bool TryValidateProperty(string name, ValueTracker<TDProperty> property, MapTracker<TDProperty> properties, MapTracker<TDDataSchema>? schemaDefinitions, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
+        private bool TryValidateProperty(string name, ValueTracker<TDProperty> property, MapTracker<TDProperty> properties, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? propertyGroups, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
         {
             if (!TryValidatePropertyForms(name, property.Value.Forms, schemaDefinitions, property.Value.ReadOnly, out contentType, dovContextPresent, protContextPresent, contextTokenIndex))
             {
@@ -1277,14 +1312,24 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             if (property.Value.MemberOf != null)
             {
+                bool memberOfHasError = false;
                 if (!TryValidateRequiredContext(property.Value.MemberOfPrefixType, dovContextPresent, false, platContextPresent, $"Property element '{TDProperty.MemberOfName}' property", property.Value.MemberOf.TokenIndex, contextTokenIndex))
                 {
-                    hasError = true;
+                    memberOfHasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(property.Value.MemberOf.Value.Value))
                 {
                     errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Property element '{TDProperty.MemberOfName}' property has empty value.", property.Value.MemberOf.TokenIndex);
+                    memberOfHasError = true;
+                }
+                else if (!memberOfHasError && !TryValidateMemberOfMatchesGroup(property.Value.MemberOf, propertyGroups, "Property", TDThing.PropertyGroupsName))
+                {
+                    memberOfHasError = true;
+                }
+
+                if (memberOfHasError)
+                {
                     hasError = true;
                 }
             }
@@ -1356,7 +1401,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
-        private bool TryValidateEvents(MapTracker<TDEvent>? evts, MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
+        private bool TryValidateEvents(MapTracker<TDEvent>? evts, MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? eventGroups, HashSet<SerializationFormat> serializationFormats, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
         {
             if (evts?.Entries == null)
             {
@@ -1367,7 +1412,7 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             foreach (KeyValuePair<string, ValueTracker<TDEvent>> evt in evts.Entries)
             {
-                if (!TryValidateEvent(evt.Key, evt.Value, properties, schemaDefinitions, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
+                if (!TryValidateEvent(evt.Key, evt.Value, properties, schemaDefinitions, eventGroups, out ValueTracker<StringHolder>? contentType, dovContextPresent, protContextPresent, platContextPresent, qudtContextPresent, contextTokenIndex))
                 {
                     hasError = true;
                 }
@@ -1391,7 +1436,7 @@ namespace Azure.Iot.Operations.CodeGeneration
             return !hasError;
         }
 
-        private bool TryValidateEvent(string name, ValueTracker<TDEvent> evt, MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
+        private bool TryValidateEvent(string name, ValueTracker<TDEvent> evt, MapTracker<TDProperty>? properties, MapTracker<TDDataSchema>? schemaDefinitions, ArrayTracker<TDAffordanceGroup>? eventGroups, out ValueTracker<StringHolder>? contentType, bool dovContextPresent, bool protContextPresent, bool platContextPresent, bool qudtContextPresent, long contextTokenIndex)
         {
             if (!TryValidateForms(evt.Value.Forms, FormsKind.Event, schemaDefinitions, out contentType, dovContextPresent, protContextPresent, contextTokenIndex))
             {
@@ -1489,14 +1534,24 @@ namespace Azure.Iot.Operations.CodeGeneration
 
             if (evt.Value.MemberOf != null)
             {
+                bool memberOfHasError = false;
                 if (!TryValidateRequiredContext(evt.Value.MemberOfPrefixType, dovContextPresent, false, platContextPresent, $"Event element '{TDEvent.MemberOfName}' property", evt.Value.MemberOf.TokenIndex, contextTokenIndex))
                 {
-                    hasError = true;
+                    memberOfHasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(evt.Value.MemberOf.Value.Value))
                 {
                     errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Event element '{TDEvent.MemberOfName}' property has empty value.", evt.Value.MemberOf.TokenIndex);
+                    memberOfHasError = true;
+                }
+                else if (!memberOfHasError && !TryValidateMemberOfMatchesGroup(evt.Value.MemberOf, eventGroups, "Event", TDThing.EventGroupsName))
+                {
+                    memberOfHasError = true;
+                }
+
+                if (memberOfHasError)
+                {
                     hasError = true;
                 }
             }

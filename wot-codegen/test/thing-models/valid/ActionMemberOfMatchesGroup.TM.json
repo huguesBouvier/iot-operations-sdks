@@ -5,24 +5,19 @@
   ],
   "@type": "tm:ThingModel",
   "title": "Noop",
-  "dov:propertyGroups": [
-    { "title": "MyPropertyGroup" }
+  "dov:actionGroups": [
+    { "title": "MyActionGroup" }
   ],
   "actions": {
-  },
-  "properties": {
-    "alpha": {
-      "type": "string",
-      "dov:memberOf": "MyPropertyGroup",
+    "noop": {
+      "dov:memberOf": "MyActionGroup",
       "forms": [
         {
           "contentType": "application/json",
-          "dov:topic": "sample/alpha/{maintainerId}",
-          "op": "readproperty"
+          "dov:topic": "sample/TestThing/command/noop",
+          "op": "invokeaction"
         }
       ]
     }
-  },
-  "events": {
   }
 }

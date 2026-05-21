@@ -5,15 +5,15 @@
   ],
   "@type": "tm:ThingModel",
   "title": "Noop",
-  "dov:propertyGroups": [
-    { "title": "MyPropertyGroup" }
+  "dov:eventGroups": [
+    { "title": "MisplacedGroup" }
   ],
   "actions": {
   },
   "properties": {
     "alpha": {
       "type": "string",
-      "dov:memberOf": "MyPropertyGroup",
+      "dov:memberOf": "MisplacedGroup",
       "forms": [
         {
           "contentType": "application/json",
