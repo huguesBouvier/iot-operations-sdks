@@ -20,6 +20,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string WithUnitName = TDCommon.WithUnitName;
         public const string WithUnitLegacyName = TDCommon.WithUnitLegacyName;
         public const string HasQuantityKindName = TDCommon.HasQuantityKindName;
+        public const string MemberOfName = TDCommon.MemberOfName;
+        public const string MemberOfLegacyName = TDCommon.MemberOfLegacyName;
 
         public static new readonly HashSet<string> SupportedProperties = new()
         {
@@ -33,7 +35,9 @@ namespace Azure.Iot.Operations.TDParser.Model
             ContainedInLegacyName,
             WithUnitName,
             WithUnitLegacyName,
-            HasQuantityKindName
+            HasQuantityKindName,
+            MemberOfName,
+            MemberOfLegacyName
         };
 
         public ValueTracker<BoolHolder>? ReadOnly { get; set; }
@@ -50,6 +54,8 @@ namespace Azure.Iot.Operations.TDParser.Model
 
         public ValueTracker<StringHolder>? HasQuantityKind { get; set; }
 
+        public ValueTracker<StringHolder>? MemberOf { get; set; }
+
         public PrefixType PlaceholderPrefixType { get; set; } = PrefixType.Indeterminate;
 
         public PrefixType ContainsPrefixType { get; set; } = PrefixType.Indeterminate;
@@ -57,6 +63,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public PrefixType ContainedInPrefixType { get; set; } = PrefixType.Indeterminate;
 
         public PrefixType WithUnitPrefixType { get; set; } = PrefixType.Indeterminate;
+
+        public PrefixType MemberOfPrefixType { get; set; } = PrefixType.Indeterminate;
 
         public virtual bool Equals(TDProperty? other)
         {
@@ -73,13 +81,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                        Contains == other.Contains &&
                        ContainedIn == other.ContainedIn &&
                        WithUnit == other.WithUnit &&
-                       HasQuantityKind == other.HasQuantityKind;
+                       HasQuantityKind == other.HasQuantityKind &&
+                       MemberOf == other.MemberOf;
             }
         }
 
         public override int GetHashCode()
         {
-            return (base.GetHashCode(), ReadOnly, Placeholder, Forms, Contains, ContainedIn, WithUnit, HasQuantityKind).GetHashCode();
+            return (base.GetHashCode(), ReadOnly, Placeholder, Forms, Contains, ContainedIn, WithUnit, HasQuantityKind, MemberOf).GetHashCode();
         }
 
         public static bool operator ==(TDProperty? left, TDProperty? right)
@@ -175,6 +184,13 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (MemberOf != null)
+            {
+                foreach (ITraversable item in MemberOf.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static new TDProperty Deserialize(ref Utf8JsonReader reader)
@@ -238,6 +254,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                             break;
                         case HasQuantityKindName:
                             prop.HasQuantityKind = ValueTracker<StringHolder>.Deserialize(ref reader, HasQuantityKindName);
+                            break;
+                        case MemberOfName:
+                            prop.MemberOf = ValueTracker<StringHolder>.Deserialize(ref reader, MemberOfName);
+                            prop.MemberOfPrefixType = PrefixType.DoVocabulary;
+                            break;
+                        case MemberOfLegacyName:
+                            prop.MemberOf = ValueTracker<StringHolder>.Deserialize(ref reader, MemberOfName);
+                            prop.MemberOfPrefixType = PrefixType.AioPlatform;
                             break;
                         default:
                             reader.Skip();

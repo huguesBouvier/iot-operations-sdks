@@ -17,8 +17,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string FormsName = TDCommon.FormsName;
         public const string NamespaceName = TDCommon.NamespaceName;
         public const string NamespaceLegacyName = TDCommon.NamespaceLegacyName;
-        public const string MemberOfName = "dov:memberOf";
-        public const string MemberOfLegacyName = "aov:memberOf";
+        public const string MemberOfName = TDCommon.MemberOfName;
+        public const string MemberOfLegacyName = TDCommon.MemberOfLegacyName;
 
         public static readonly HashSet<string> SupportedProperties = new()
         {

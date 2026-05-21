@@ -18,6 +18,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string WithUnitName = "dov:withUnit";
         public const string WithUnitLegacyName = "aov:withUnit";
         public const string HasQuantityKindName = "qudt:hasQuantityKind";
+        public const string MemberOfName = "dov:memberOf";
+        public const string MemberOfLegacyName = "aov:memberOf";
 
         public const string WithUnitPrefix = "properties/";
     }

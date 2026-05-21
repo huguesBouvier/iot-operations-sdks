@@ -1154,7 +1154,21 @@ namespace Azure.Iot.Operations.CodeGeneration
                 }
             }
 
-            if (!TryValidateDataSchema(property, (propName) => propName == TDProperty.ReadOnlyName || propName == TDProperty.PlaceholderName || propName == TDProperty.FormsName || propName == TDProperty.ContainsName || propName == TDProperty.ContainsLegacyName || propName == TDProperty.ContainedInName || propName == TDProperty.ContainedInLegacyName || propName == TDProperty.NamespaceName || propName == TDDataSchema.NamespaceLegacyName || propName == TDProperty.WithUnitName || propName == TDProperty.WithUnitLegacyName || propName == TDProperty.HasQuantityKindName, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Property, contentType))
+            if (property.Value.MemberOf != null)
+            {
+                if (!TryValidateRequiredContext(property.Value.MemberOfPrefixType, dovContextPresent, false, platContextPresent, $"Property element '{TDProperty.MemberOfName}' property", property.Value.MemberOf.TokenIndex, contextTokenIndex))
+                {
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(property.Value.MemberOf.Value.Value))
+                {
+                    errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Property element '{TDProperty.MemberOfName}' property has empty value.", property.Value.MemberOf.TokenIndex);
+                    hasError = true;
+                }
+            }
+
+            if (!TryValidateDataSchema(property, (propName) => propName == TDProperty.ReadOnlyName || propName == TDProperty.PlaceholderName || propName == TDProperty.FormsName || propName == TDProperty.ContainsName || propName == TDProperty.ContainsLegacyName || propName == TDProperty.ContainedInName || propName == TDProperty.ContainedInLegacyName || propName == TDProperty.NamespaceName || propName == TDDataSchema.NamespaceLegacyName || propName == TDProperty.WithUnitName || propName == TDProperty.WithUnitLegacyName || propName == TDProperty.HasQuantityKindName || propName == TDProperty.MemberOfName || propName == TDProperty.MemberOfLegacyName, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Property, contentType))
             {
                 hasError = true;
             }
@@ -1343,6 +1357,20 @@ namespace Azure.Iot.Operations.CodeGeneration
                 if (string.IsNullOrWhiteSpace(evt.Value.HasQuantityKind.Value.Value))
                 {
                     errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Event element '{TDProperty.HasQuantityKindName}' property has empty value.", evt.Value.HasQuantityKind.TokenIndex);
+                    hasError = true;
+                }
+            }
+
+            if (evt.Value.MemberOf != null)
+            {
+                if (!TryValidateRequiredContext(evt.Value.MemberOfPrefixType, dovContextPresent, false, platContextPresent, $"Event element '{TDEvent.MemberOfName}' property", evt.Value.MemberOf.TokenIndex, contextTokenIndex))
+                {
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(evt.Value.MemberOf.Value.Value))
+                {
+                    errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Event element '{TDEvent.MemberOfName}' property has empty value.", evt.Value.MemberOf.TokenIndex);
                     hasError = true;
                 }
             }
