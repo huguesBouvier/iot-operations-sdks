@@ -699,6 +699,30 @@ namespace Azure.Iot.Operations.CodeGeneration
             return true;
         }
 
+        private bool TryValidatePropertyIri(ValueTracker<StringHolder>? propertyIri, bool dovContextPresent, string elementDescription, long contextTokenIndex)
+        {
+            if (propertyIri == null)
+            {
+                return true;
+            }
+
+            bool hasError = false;
+
+            if (!dovContextPresent)
+            {
+                errorReporter.ReportError(ErrorCondition.PropertyInvalid, $"{elementDescription} '{TDCommon.PropertyIriName}' property requires the Digital Operations Vocabulary context (\"{TDValues.ContextPrefixDoVocab}\") in the '{TDThing.ContextName}' property.", propertyIri.TokenIndex, contextTokenIndex);
+                hasError = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyIri.Value.Value))
+            {
+                errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"{elementDescription} '{TDCommon.PropertyIriName}' property has empty value.", propertyIri.TokenIndex);
+                hasError = true;
+            }
+
+            return !hasError;
+        }
+
         private bool TryValidateLinks(IResolvingThing resolvingThing, bool dovContextPresent, bool platContextPresent, long contextTokenIndex, bool validateReferences)
         {
             if (resolvingThing.ParsedThing.Thing.Links?.Elements == null)
@@ -984,6 +1008,11 @@ namespace Azure.Iot.Operations.CodeGeneration
                 }
             }
 
+            if (!TryValidatePropertyIri(action.Value.PropertyIri, dovContextPresent, "Action element", contextTokenIndex))
+            {
+                hasError = true;
+            }
+
             if (action.Value.Input != null && !TryValidateActionDataSchema(action.Value.Input, TDAction.InputName, contentType, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex))
             {
                 hasError = true;
@@ -1168,7 +1197,12 @@ namespace Azure.Iot.Operations.CodeGeneration
                 }
             }
 
-            if (!TryValidateDataSchema(property, (propName) => propName == TDProperty.ReadOnlyName || propName == TDProperty.PlaceholderName || propName == TDProperty.FormsName || propName == TDProperty.ContainsName || propName == TDProperty.ContainsLegacyName || propName == TDProperty.ContainedInName || propName == TDProperty.ContainedInLegacyName || propName == TDProperty.NamespaceName || propName == TDDataSchema.NamespaceLegacyName || propName == TDProperty.WithUnitName || propName == TDProperty.WithUnitLegacyName || propName == TDProperty.HasQuantityKindName || propName == TDProperty.MemberOfName || propName == TDProperty.MemberOfLegacyName, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Property, contentType))
+            if (!TryValidatePropertyIri(property.Value.PropertyIri, dovContextPresent, "Property element", contextTokenIndex))
+            {
+                hasError = true;
+            }
+
+            if (!TryValidateDataSchema(property, (propName) => propName == TDProperty.ReadOnlyName || propName == TDProperty.PlaceholderName || propName == TDProperty.FormsName || propName == TDProperty.ContainsName || propName == TDProperty.ContainsLegacyName || propName == TDProperty.ContainedInName || propName == TDProperty.ContainedInLegacyName || propName == TDProperty.NamespaceName || propName == TDDataSchema.NamespaceLegacyName || propName == TDProperty.WithUnitName || propName == TDProperty.WithUnitLegacyName || propName == TDProperty.HasQuantityKindName || propName == TDProperty.MemberOfName || propName == TDProperty.MemberOfLegacyName || propName == TDProperty.PropertyIriName, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Property, contentType))
             {
                 hasError = true;
             }
@@ -1373,6 +1407,11 @@ namespace Azure.Iot.Operations.CodeGeneration
                     errorReporter.ReportError(ErrorCondition.PropertyEmpty, $"Event element '{TDEvent.MemberOfName}' property has empty value.", evt.Value.MemberOf.TokenIndex);
                     hasError = true;
                 }
+            }
+
+            if (!TryValidatePropertyIri(evt.Value.PropertyIri, dovContextPresent, "Event element", contextTokenIndex))
+            {
+                hasError = true;
             }
 
             if (evt.Value.Data != null && !TryValidateDataSchema(evt.Value.Data, null, dovContextPresent, protContextPresent, platContextPresent, contextTokenIndex, DataSchemaKind.Event, contentType))

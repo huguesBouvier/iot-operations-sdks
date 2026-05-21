@@ -25,6 +25,7 @@ namespace Azure.Iot.Operations.TDParser.Model
         public const string HasQuantityKindName = TDCommon.HasQuantityKindName;
         public const string MemberOfName = TDCommon.MemberOfName;
         public const string MemberOfLegacyName = TDCommon.MemberOfLegacyName;
+        public const string PropertyIriName = TDCommon.PropertyIriName;
 
         public static readonly HashSet<string> SupportedProperties = new()
         {
@@ -43,7 +44,8 @@ namespace Azure.Iot.Operations.TDParser.Model
             WithUnitLegacyName,
             HasQuantityKindName,
             MemberOfName,
-            MemberOfLegacyName
+            MemberOfLegacyName,
+            PropertyIriName
         };
 
         public ValueTracker<StringHolder>? Description { get; set; }
@@ -67,6 +69,8 @@ namespace Azure.Iot.Operations.TDParser.Model
         public ValueTracker<StringHolder>? HasQuantityKind { get; set; }
 
         public ValueTracker<StringHolder>? MemberOf { get; set; }
+
+        public ValueTracker<StringHolder>? PropertyIri { get; set; }
 
         public PrefixType PlaceholderPrefixType { get; set; } = PrefixType.Indeterminate;
 
@@ -97,13 +101,14 @@ namespace Azure.Iot.Operations.TDParser.Model
                        Namespace == other.Namespace &&
                        WithUnit == other.WithUnit &&
                        HasQuantityKind == other.HasQuantityKind &&
-                       MemberOf == other.MemberOf;
+                       MemberOf == other.MemberOf &&
+                       PropertyIri == other.PropertyIri;
             }
         }
 
         public override int GetHashCode()
         {
-            return (Description, Data, Placeholder, Forms, Contains, ContainedIn, Namespace, WithUnit, HasQuantityKind, MemberOf).GetHashCode();
+            return (Description, Data, Placeholder, Forms, Contains, ContainedIn, Namespace, WithUnit, HasQuantityKind, MemberOf, PropertyIri).GetHashCode();
         }
 
         public static bool operator ==(TDEvent? left, TDEvent? right)
@@ -215,6 +220,13 @@ namespace Azure.Iot.Operations.TDParser.Model
                     yield return item;
                 }
             }
+            if (PropertyIri != null)
+            {
+                foreach (ITraversable item in PropertyIri.Traverse())
+                {
+                    yield return item;
+                }
+            }
         }
 
         public static TDEvent Deserialize(ref Utf8JsonReader reader)
@@ -295,6 +307,9 @@ namespace Azure.Iot.Operations.TDParser.Model
                     case MemberOfLegacyName:
                         evt.MemberOf = ValueTracker<StringHolder>.Deserialize(ref reader, MemberOfName);
                         evt.MemberOfPrefixType = PrefixType.AioPlatform;
+                        break;
+                    case PropertyIriName:
+                        evt.PropertyIri = ValueTracker<StringHolder>.Deserialize(ref reader, PropertyIriName);
                         break;
                     default:
                         reader.Skip();
